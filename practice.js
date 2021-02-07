@@ -30,11 +30,23 @@ var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
 // 	}
 // ]
 
+// returns true if the bounding boxes overlap
+function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
+	var x1_high = x1 + w1;
+	var y1_high = y1 + h1;
+	var x2_high = x2 + w2;
+	var y2_high = y2 + h2;
+	return (x1 < x2_high && x2 < x1_high && y1 < y2_high && y2 < y1_high)
+}
+
 function create_obstacle_manager(){
 
 	this.current_obstacles = [];
 
 	this.spawn_obstacle = function(obstacle_id){
+
+		//TODO define collision
+
 
 		var new_obs = {
 			name:'cactus',
@@ -108,6 +120,12 @@ function create_player() {
 	this.sprite_h = 2;
 	this.opaque_col = 15;
 
+	// collision is relative to the sprites position (ie, top left of the sprite) not the screen
+	this.collision_x = 2;
+	this.collision_y = 7;
+	this.collision_w = 11;
+	this.collision_h = 7;
+
 	this.x = 10;
 	this.y = win_height-(8*4);
 	this.resting_y = win_height-(8*4) + 3;
@@ -140,9 +158,34 @@ function create_player() {
 
 	this.check_collisions = function(){
 
-		//TODO hardcode player collision box
+		//get player collision box
+		var actual_colx = this.collision_x + this.x;
+		var actual_coly = this.collision_y + this.y;
 
-		//TODO hardcode obstacle collision boxes
+		// for each obstacle
+		for (var i = obstacle_manager.current_obstacles.length - 1; i >= 0; i--) {
+			var this_obstacle = obstacle_manager.current_obstacles[i];
+
+			var actual_ob_colx = this_obstacle.collision_x + this_obstacle.x;
+			var actual_ob_coly = this_obstacle.collision_y + this_obstacle.y;
+
+			var x1 = actual_colx;
+			var y1 = actual_coly;
+			var w1 = this.collision_w;
+			var h1 = this.collision_h;
+			var x2 = actual_ob_colx;
+			var y2 = actual_ob_coly;
+			var w2 = actual_ob_colx + this_obstacle.collision_w;
+			var h2 = actual_ob_coly + this_obstacle.collision_h;
+
+			if(bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2)){
+				//TODO DO SOMETHING
+			}
+
+
+		}
+
+		
 
 	}
 
