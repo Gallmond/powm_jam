@@ -138,6 +138,14 @@ function create_player() {
 		}
 	}
 
+	this.check_collisions = function(){
+
+		//TODO hardcode player collision box
+
+		//TODO hardcode obstacle collision boxes
+
+	}
+
 	this.fall = function(){
 		
 		var now = time();
