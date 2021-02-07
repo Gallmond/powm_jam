@@ -47,7 +47,6 @@ function create_obstacle_manager(){
 
 		//TODO define collision
 
-
 		var new_obs = {
 			name:'cactus',
 			spr_id:288,
@@ -112,9 +111,7 @@ function create_obstacle_manager(){
 }
 var obstacle_manager = false;
 
-
 function create_player() {
-
 	this.sprite_id = 256;
 	this.sprite_w = 2;
 	this.sprite_h = 2;
@@ -157,7 +154,6 @@ function create_player() {
 	}
 
 	this.check_collisions = function(){
-
 		//get player collision box
 		var actual_colx = this.collision_x + this.x;
 		var actual_coly = this.collision_y + this.y;
@@ -181,43 +177,33 @@ function create_player() {
 			if(bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2)){
 				//TODO DO SOMETHING
 			}
-
-
 		}
-
-		
-
 	}
 
 	this.fall = function(){
-		
 		var now = time();
-		
 		// if on the ground, no change to y_veloticy
 		if(this.onGround() && !key(_key_space)){
 			this.y_velocity = 0;
 		}else{
-	
 			// prevent falling if key is still held
 			// or it's been more than 10ms
 			if(
 				key(_key_space)
-			 && now - this.jump_started < 100)
+			 	&& now - this.jump_started < 100)
 			{
-							
+				// do nothing			
 			}else{
 				// start falling
 				this.y_velocity+= this.fall_speed;
 
 			}
-			
 		}
 		// if i'm rising, don't rise 
 		// faster than gravity allows
 		if(this.y_velocity < this.y_gravity){
 				this.y_velocity = this.y_gravity;
 		}
-		
 		// if new position would be in the
 		//  ground, set to ground
 		var new_y = this.y + this.y_velocity;
@@ -226,13 +212,11 @@ function create_player() {
 		}else{
 			this.y += this.y_velocity;
 		}
-
-		print('this.y: ' + this.y, 50,50,5);
-		print('this.onGround(): ' + this.onGround(), 50,55,5);
-		print('this.y_velocity: ' + this.y_velocity, 50,60,5);	
-	
+		// print('this.y: ' + this.y, 50,50,5);
+		// print('this.onGround(): ' + this.onGround(), 50,55,5);
+		// print('this.y_velocity: ' + this.y_velocity, 50,60,5);	
 	}
-	
+
 	this.jump_started = false;
 	this.jump = function(){
 		if(!this.onGround()){
@@ -243,13 +227,11 @@ function create_player() {
 	}
 	
 	this.update = function () {
-
 		// process falling
 		this.fall();
-		
 		this.move();
-
 	}
+
 	this.draw = function () {
 		spr(
 			this.sprite_id,
@@ -260,13 +242,13 @@ function create_player() {
 			0,
 			0,
 			this.sprite_w,
-			this.sprite_h);
+			this.sprite_h
+		);
 	}
 
 	return this;
 }
 var player = false;
-
 
 function game() {
 	// create player
@@ -296,28 +278,16 @@ function game() {
 
 	obstacle_manager.aupdate();
 	obstacle_manager.adraw();
-
-	//TEST obstacle
-	// spr(288,100,100,_alpha_color,1,0,0,4,4);
-
-
 }
-
 
 function menu() {
 	cls(15);
-	// billie eilish kart
 	print("Billie Eilish Kart", 5, 5, 0, false, 2);
-
 	print("Press [s] key to start!", 5, 20, 0);
-		print("[r] key to return to menu.", 5, 30, 0);
-
+	print("[r] key to return to menu.", 5, 30, 0);
 	if (key(_key_s)) {
 		state = 'game';
-		print("PRESSED", 50, 50, 0);
 	}
-
-
 }
 
 function mainControls() {
@@ -325,24 +295,16 @@ function mainControls() {
 	if (key(18)) { // R
 		state = 'menu';
 	}
-
-
 };
 
-
-
 function TIC() {
-
 	mainControls();
-
 	if (state === 'menu') {
 		menu();
 	}
 	if (state === 'game') {
 		game();
 	}
-	//	print("test");	
-	//	spr(256,5,5,15,1,0,0,2,2);
 }
 
 // <TILES>
