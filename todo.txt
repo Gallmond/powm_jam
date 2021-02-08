@@ -1,0 +1,5 @@
+//TODO
+- add a sky obstacle
+- rules around frequency and position
+- auto obstacles
+- RESCALE PLAYER

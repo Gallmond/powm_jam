@@ -41,33 +41,57 @@ function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
 
 function create_obstacle_manager(){
 
+	// define possible obstacles here
+	this.OBSTACLE_LIST = [
+		{
+			name:'cactus',
+			spr_id:288, // id of sprite
+			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 4, // number of sprites wide composite sprite is
+			spr_h: 4,
+			spr_scale:1, // scale of sprite
+			collision_x: 9, // colliding area relative to sprite only
+			collision_y: 2,
+			collision_w: 14,
+			collision_h: 30,
+		},
+		{
+			name:'trash',
+			spr_id:292,
+			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 4, // number of sprites wide composite sprite is
+			spr_h: 4,
+			spr_scale:1, // scale of sprite
+			collision_x: 9, // colliding area relative to sprite only
+			collision_y: 14,
+			collision_w: 15,
+			collision_h: 18,
+		}
+	];
+
+
 	this.current_obstacles = [];
 
 	this.spawn_obstacle = function(obstacle_id){
 
-		//TODO define collision
-
-		var new_obs = {
-			name:'cactus',
-			spr_id:288,
-			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
-			spr_w: 4,
-			spr_h: 4,
-			spr_scale:1,
-
-			//TEMP
-			collision_x: 9,
-			collision_y: 2,
-			collision_w: 14,
-			collision_h: 30,
-
+		// get random obstacle
+		if(!obstacle_id && obstacle_id!==0){
+			min = 0;
+			max = Math.floor(this.OBSTACLE_LIST.length-1);
+			var ob_id = Math.floor(Math.random() * (max - min + 1)) + min;
+			var new_obs = this.OBSTACLE_LIST[ob_id];
+		}else{
+			var new_obs = this.OBSTACLE_LIST[obstacle_id]
 		}
 
+		// print("min: "+String(min)+", max: "+String(max)+", ob_id: "+String(ob_id),5,5,5);
+		
+
+		// set initial x/y
 		new_obs.y = new_obs.resting_y;
 		new_obs.x = win_width;
 
 		this.current_obstacles.push(new_obs);
-
 	}
 
 	this.aupdate = function(){
@@ -249,9 +273,9 @@ function create_player() {
 			this.x,
 			this.y,
 			this.opaque_col,
-			1,
-			0,
-			0,
+			1, // scale
+			0, // flip
+			0, // rotate
 			this.sprite_w,
 			this.sprite_h
 		);
@@ -284,7 +308,7 @@ function game() {
 	player.draw();
 
 	if(key(_key_space) && obstacle_manager.current_obstacles.length < 1){
-		obstacle_manager.spawn_obstacle(1);
+		obstacle_manager.spawn_obstacle();
 	}
 
 	obstacle_manager.aupdate();
@@ -332,18 +356,34 @@ function TIC() {
 // 033:fffffff7ffffff73fffff733fffff733f77ff7337337f7333333773333337733
 // 034:7fffffff37ffffff337fffff337fffff337fffff337fffff337fffff337ff77f
 // 035:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 036:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 037:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 038:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 039:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 048:fffffff7fffffff7fffffff7fffffff7fffffff7fffffff7fffffff7ffffffff
 // 049:3333773333337733333377333333773333337733333377333333773373333333
 // 050:337f733733773333337733333377333333773333337733333377333333773333
 // 051:ffffffff7fffffff7fffffff7fffffff7fffffff7fffffff7fffffff7fffffff
+// 052:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 053:ffffffffffffffffffffffffffffffffff777777f7a333337aaaaaaa7a7777aa
+// 054:ffffffffffffffffffffffffffffffff77ffffff377777ffaa333377aaaaaa33
+// 055:ffffffffffffffffffffffffffffffffffffffffffffffff7fffffff37ffffff
 // 064:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 065:f7333333ff733333fff77733fffff733fffff733fffff733fffff733fffff733
 // 066:33773333333333373333337f333337ff33777fff337fffff337fffff337fffff
 // 067:7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 068:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 069:f7759477f5959449f7b7b7bdf7baaaaaf7baaaaaf7ab7aa3f7a3baa3f7a37aa3
+// 070:77a4aaaadd4777a774777777aaaaaa37aaaaaa377a37aa117a37aa117a37a331
+// 071:a7ffffff7fffffffffffffffffffffffffffffff111fffff111fffff11ffffff
 // 080:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 081:fffff733fffff733fffff733fffff733fffff733f7fff733737ff733f7ffff77
 // 082:337fffff337fffff337fffff337fffff337fffff337fffff337fffff77ffffff
 // 083:fffffffffffffffffffffffffffffffffffffffff7ffffff737ffffff7ffffff
+// 084:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 085:ff737aa3ff737aa3ff737aa3ff737aa3ff737aa3ff7a3aaaff7aaaaafff77777
+// 086:7a37a3bb7a37a1b17a37a1107a37a1107a37a1103aa3a141aaaaa14177777744
+// 087:11ffffff000fffff000fffff0001ffff00011fff000011ff000044ff01001fff
 // 255:0000000000000000000000000000000000000000000000000123456789abcdef
 // </SPRITES>
 
