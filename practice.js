@@ -53,7 +53,14 @@ function create_obstacle_manager(){
 			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
 			spr_w: 4,
 			spr_h: 4,
-			spr_scale:1
+			spr_scale:1,
+
+			//TEMP
+			collision_x: 9,
+			collision_y: 2,
+			collision_w: 14,
+			collision_h: 30,
+
 		}
 
 		new_obs.y = new_obs.resting_y;
@@ -162,19 +169,22 @@ function create_player() {
 		for (var i = obstacle_manager.current_obstacles.length - 1; i >= 0; i--) {
 			var this_obstacle = obstacle_manager.current_obstacles[i];
 
-			var actual_ob_colx = this_obstacle.collision_x + this_obstacle.x;
-			var actual_ob_coly = this_obstacle.collision_y + this_obstacle.y;
-
+			// player bbox
 			var x1 = actual_colx;
 			var y1 = actual_coly;
 			var w1 = this.collision_w;
 			var h1 = this.collision_h;
-			var x2 = actual_ob_colx;
-			var y2 = actual_ob_coly;
-			var w2 = actual_ob_colx + this_obstacle.collision_w;
-			var h2 = actual_ob_coly + this_obstacle.collision_h;
+
+			// obstacle bbox
+			var x2 = this_obstacle.x + this_obstacle.collision_x;
+			var y2 = this_obstacle.y + this_obstacle.collision_y;
+			var w2 = this_obstacle.collision_w;
+			var h2 = this_obstacle.collision_h;
 
 			if(bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2)){
+				print("IS COLLIDING", 5,5,11);
+				rect(x1,y1,w1,h1,11);
+				rect(x2,y2,w2,h2,11);
 				//TODO DO SOMETHING
 			}
 		}
@@ -230,6 +240,7 @@ function create_player() {
 		// process falling
 		this.fall();
 		this.move();
+		this.check_collisions();
 	}
 
 	this.draw = function () {
