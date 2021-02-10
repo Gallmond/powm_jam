@@ -7,6 +7,16 @@ var _key_space = 48; // space
 var _key_s = 19; // a
 var _key_left = 60; // LEFT
 var _key_right = 61; // RIGHT
+var _key_0 = 27; // 0
+var _key_1 = 28; // 1
+var _key_2 = 29; // 2
+var _key_3 = 30; // 3
+var _key_4 = 31; // 4
+var _key_5 = 32; // 5
+var _key_6 = 33; // 6
+var _key_7 = 34; // 7
+var _key_8 = 35; // 8
+var _key_9 = 36; // 9
 
 var running = true;
 var state = 'menu';
@@ -20,6 +30,8 @@ var win_height = 136;
 var _alpha_color = 15;
 
 var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
+
+var _min_obstacle_gap = 1000; // minimum possible milliseconds between obstacles
 
 // laters bottom/mid/top are 0,1,2
 // var OBSTACLES = [
@@ -66,35 +78,55 @@ function create_obstacle_manager(){
 			collision_y: 14,
 			collision_w: 15,
 			collision_h: 18,
+		},
+		{
+			name:'bird',
+			spr_id:352,
+			resting_y: win_height / 4,
+			spr_w: 4, // number of sprites wide composite sprite is
+			spr_h: 2,
+			spr_scale:1, // scale of sprite
+			collision_x: 6, // colliding area relative to sprite only
+			collision_y: 2,
+			collision_w: 11,
+			collision_h: 14,
 		}
 	];
 
 
 	this.current_obstacles = [];
 
+	this.last_obstacle_spawned = false;
 	this.spawn_obstacle = function(obstacle_id){
+
+		// don't spawn an obstacle if it's too close to the last one
+		if(this.OBSTACLE_LIST.length > 0){
+			if(time() - this.last_obstacle_spawned < _min_obstacle_gap){
+				return false;
+			}
+		}
 
 		// get random obstacle
 		if(!obstacle_id && obstacle_id!==0){
 			min = 0;
 			max = Math.floor(this.OBSTACLE_LIST.length-1);
 			var ob_id = Math.floor(Math.random() * (max - min + 1)) + min;
-			var new_obs = this.OBSTACLE_LIST[ob_id];
+			// var new_obs = this.OBSTACLE_LIST[ob_id];
+			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[ob_id]);
 		}else{
-			var new_obs = this.OBSTACLE_LIST[obstacle_id]
+			// var new_obs = this.OBSTACLE_LIST[obstacle_id]
+			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[obstacle_id]);
 		}
-
-		// print("min: "+String(min)+", max: "+String(max)+", ob_id: "+String(ob_id),5,5,5);
-		
 
 		// set initial x/y
 		new_obs.y = new_obs.resting_y;
 		new_obs.x = win_width;
 
 		this.current_obstacles.push(new_obs);
+		this.last_obstacle_spawned = time();
 	}
 
-	this.aupdate = function(){
+	this.update = function(){
 		for (var i = this.current_obstacles.length - 1; i >= 0; i--) {
 			this.current_obstacles[i].x-= _ground_speed;
 			// if this obstacle is now more than 32 pixels off the left, remove it
@@ -104,7 +136,7 @@ function create_obstacle_manager(){
 		}
 	}
 
-	this.adraw = function(){
+	this.draw = function(){
 		// draw these obstacles
 		for (var i = this.current_obstacles.length - 1; i >= 0; i--) {
 			var this_ob = this.current_obstacles[i];
@@ -123,19 +155,6 @@ function create_obstacle_manager(){
 		}
 
 	}
-
-	// this.obstacle_settings = [
-	// 	{
-	// 		name:'cactus',
-	// 		spr_id:288,
-	// 		resting_y: win_height-(8*4),
-	// 		spr_width: 4,
-	// 		spr_height: 4,
-	// 		spr_scale:1
-	// 	}
-
-	// 	//spr(288,100,100,_alpha_color,1,0,0,4,4);
-	// ];
 
 	return this;
 
@@ -288,11 +307,11 @@ var player = false;
 function game() {
 	// create player
 	if (player === false) {
-		player = create_player();
+		player = new create_player();
 	}
 	// create obstacle manager
 	if (obstacle_manager === false) {
-		obstacle_manager = create_obstacle_manager();
+		obstacle_manager = new create_obstacle_manager();
 	}
 
 	// clear screen
@@ -307,12 +326,22 @@ function game() {
 	// draw player
 	player.draw();
 
+	// TEMP
 	if(key(_key_space) && obstacle_manager.current_obstacles.length < 1){
 		obstacle_manager.spawn_obstacle();
 	}
+	if(key(_key_0)){
+		obstacle_manager.spawn_obstacle(0);
+	}
+	if(key(_key_1)){
+		obstacle_manager.spawn_obstacle(1);
+	}
+	if(key(_key_2)){
+		obstacle_manager.spawn_obstacle(2);
+	}
 
-	obstacle_manager.aupdate();
-	obstacle_manager.adraw();
+	obstacle_manager.update();
+	obstacle_manager.draw();
 }
 
 function menu() {
@@ -384,6 +413,22 @@ function TIC() {
 // 085:ff737aa3ff737aa3ff737aa3ff737aa3ff737aa3ff7a3aaaff7aaaaafff77777
 // 086:7a37a3bb7a37a1b17a37a1107a37a1107a37a1103aa3a141aaaaa14177777744
 // 087:11ffffff000fffff000fffff0001ffff00011fff000011ff000044ff01001fff
+// 096:fffff77fffff7337fff73337ff733333f73333337333333377777773fffffff7
+// 097:ffffffffffffffffffffffff7fffffff7777777f333333373333333333333333
+// 098:ffffffffffffffffffffffffffffffffffffffffffffffff7777777f3333337f
+// 099:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 100:fffffffffffffffffffffff7fffffff7fffff777ffff7337fff73337ff733333
+// 101:ffffffff7fffffff37ffffff337fffff3337ffff33337fff333337ff7333337f
+// 102:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 103:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 112:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 113:7333333373333333733333337333377773337fff7337ffff737ffffff7ffffff
+// 114:333777ff333337ff33777fff77ffffffffffffffffffffffffffffffffffffff
+// 115:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 116:f73333337333333377777773fffffff7ffffffffffffffffffffffffffffffff
+// 117:7333337f33333337333333333333333373333333f7333333ff733333fff77777
+// 118:ffffffffffffffff7777777f3333337f333777ff333337ff33777fff77ffffff
+// 119:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 255:0000000000000000000000000000000000000000000000000123456789abcdef
 // </SPRITES>
 
