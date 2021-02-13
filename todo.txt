@@ -1,5 +1,5 @@
 //TODO
-- RESCALE PLAYER
+- animate ground
 - animate sky obstacle (and make reusable animation code)
 - rules around frequency and position
 - auto obstacles

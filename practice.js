@@ -111,10 +111,8 @@ function create_obstacle_manager(){
 			min = 0;
 			max = Math.floor(this.OBSTACLE_LIST.length-1);
 			var ob_id = Math.floor(Math.random() * (max - min + 1)) + min;
-			// var new_obs = this.OBSTACLE_LIST[ob_id];
 			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[ob_id]);
 		}else{
-			// var new_obs = this.OBSTACLE_LIST[obstacle_id]
 			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[obstacle_id]);
 		}
 
@@ -166,16 +164,17 @@ function create_player() {
 	this.sprite_w = 2;
 	this.sprite_h = 2;
 	this.opaque_col = 15;
+	this.sprite_scale = 2;
 
 	// collision is relative to the sprites position (ie, top left of the sprite) not the screen
-	this.collision_x = 2;
-	this.collision_y = 7;
-	this.collision_w = 11;
-	this.collision_h = 7;
+	this.collision_x = 2 * this.sprite_scale;
+	this.collision_y = 7 * this.sprite_scale;
+	this.collision_w = 11 * this.sprite_scale;
+	this.collision_h = 7 * this.sprite_scale;
 
 	this.x = 10;
 	this.y = win_height-(8*4);
-	this.resting_y = win_height-(8*4) + 3;
+	this.resting_y = win_height - (8*4) - (8*2) + 3;
 	this.is_jumping = false;
 	this.is_falling = false;
 	
@@ -292,7 +291,7 @@ function create_player() {
 			this.x,
 			this.y,
 			this.opaque_col,
-			1, // scale
+			this.sprite_scale, // scale
 			0, // flip
 			0, // rotate
 			this.sprite_w,
@@ -304,6 +303,7 @@ function create_player() {
 }
 var player = false;
 
+var ground_offset = 0;
 function game() {
 	// create player
 	if (player === false) {
@@ -318,7 +318,10 @@ function game() {
 	cls(15);
 
 	// draw ground
-	map(0, 0, win_width, 20, 0, win_height - (8 * 2))
+	// map(cell_x,cell_y,cell_w,cell_h,x,y,alpha_color,scale,remap);
+	ground_offset-= _ground_speed;
+	ground_offset = ground_offset < -8 ? 0 : ground_offset;
+	map(0, 0, (win_width / 8 )+2, 3, ground_offset, win_height - (8 * 2))
 
 	// update playe
 	player.update();
@@ -433,7 +436,7 @@ function TIC() {
 // </SPRITES>
 
 // <MAP>
-// 001:010101010101010101010101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+// 001:010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 // </MAP>
 
 // <WAVES>
