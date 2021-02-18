@@ -7,6 +7,7 @@ var _key_space = 48; // space
 var _key_s = 19; // a
 var _key_left = 60; // LEFT
 var _key_right = 61; // RIGHT
+var _key_up = 58; // UP
 var _key_0 = 27; // 0
 var _key_1 = 28; // 1
 var _key_2 = 29; // 2
@@ -51,6 +52,9 @@ function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
 	return (x1 < x2_high && x2 < x1_high && y1 < y2_high && y2 < y1_high)
 }
 
+
+
+
 function create_obstacle_manager(){
 
 	// define possible obstacles here
@@ -90,13 +94,51 @@ function create_obstacle_manager(){
 			collision_y: 2,
 			collision_w: 11,
 			collision_h: 14,
+		},
+		{
+			name:'bird',
+			state:'idle',
+			animation_speed: 2, // frames per second, ie how fast to cycle through the below
+			animation_frame: 0, // which frame to display
+			animation_last_frame: time(), // time() of last animation
+			sprites:{
+				'idle':[
+					{
+						spr_id:352,
+						spr_w: 4, // number of sprites wide composite sprite is
+						spr_h: 2,
+						spr_scale:1, // scale of sprite
+					},
+					{
+						spr_id:356,
+						spr_w: 4, // number of sprites wide composite sprite is
+						spr_h: 2,
+						spr_scale:1, // scale of sprite
+					}
+				]
+			},
+			resting_y: win_height / 4,
+			collision_x: 6, // colliding area relative to sprite only
+			collision_y: 2,
+			collision_w: 11,
+			collision_h: 14,
 		}
 	];
 
 
+	var min_time_between_obstacles = 100;
+	this.spawnRandomObstacle = function(){
+		var now = time();
+		var diff = now - this.last_obstacle_spawned;
+		if(diff > min_time_between_obstacles){
+			this.spawn_obstacle();
+		}
+	}
+
+
 	this.current_obstacles = [];
 
-	this.last_obstacle_spawned = false;
+	this.last_obstacle_spawned = time();
 	this.spawn_obstacle = function(obstacle_id){
 
 		// don't spawn an obstacle if it's too close to the last one
@@ -136,22 +178,46 @@ function create_obstacle_manager(){
 
 	this.draw = function(){
 		// draw these obstacles
+		var now = time();
 		for (var i = this.current_obstacles.length - 1; i >= 0; i--) {
 			var this_ob = this.current_obstacles[i];
 
-			spr(
-				this_ob.spr_id,
-				this_ob.x,
-				this_ob.y,
-				_alpha_color,
-				this_ob.spr_scale,
-				0,
-				0,
-				this_ob.spr_w,
-				this_ob.spr_h
-			);
+			// if this object has an array of sprites it indicats its animated
+			if(this_ob['sprites'] !== undefined){
+				var delta = now - this_ob.animation_last_frame;
+				var diff = 1000 / this_ob.animation_speed;
+				// has enough time pased to move onto the next frame?
+				if(delta > diff){
+					var new_frame = this_ob.animation_frame + 1;
+					this_ob.animation_frame = new_frame % this_ob.sprites[this_ob.state].length
+					this_ob.animation_last_frame = now;
+				}
+				var this_sprite = this_ob.sprites[this_ob.state][this_ob.animation_frame];
+				spr(
+					this_sprite.spr_id,
+					this_ob.x,
+					this_ob.y,
+					_alpha_color,
+					this_sprite.spr_scale,
+					0,
+					0,
+					this_sprite.spr_w,
+					this_sprite.spr_h
+				);
+			}else{
+				spr(
+					this_ob.spr_id,
+					this_ob.x,
+					this_ob.y,
+					_alpha_color,
+					this_ob.spr_scale,
+					0,
+					0,
+					this_ob.spr_w,
+					this_ob.spr_h
+				);
+			}
 		}
-
 	}
 
 	return this;
@@ -191,7 +257,7 @@ function create_player() {
 	}
 	
 	this.move = function(){
-		if(key(_key_space)){
+		if(key(_key_space) || key(_key_up)){
 			this.jump();
 		}
 		if(key(_key_left)){
@@ -235,13 +301,13 @@ function create_player() {
 	this.fall = function(){
 		var now = time();
 		// if on the ground, no change to y_veloticy
-		if(this.onGround() && !key(_key_space)){
+		if(this.onGround() && !(key(_key_space) || key(_key_up))){
 			this.y_velocity = 0;
 		}else{
 			// prevent falling if key is still held
 			// or it's been more than 10ms
 			if(
-				key(_key_space)
+				(key(_key_space) || key(_key_up))
 			 	&& now - this.jump_started < 100)
 			{
 				// do nothing			
@@ -303,6 +369,7 @@ function create_player() {
 }
 var player = false;
 
+var entities = [];
 var ground_offset = 0;
 function game() {
 	// create player
@@ -320,7 +387,9 @@ function game() {
 	// draw ground
 	// map(cell_x,cell_y,cell_w,cell_h,x,y,alpha_color,scale,remap);
 	ground_offset-= _ground_speed;
-	ground_offset = ground_offset < -8 ? 0 : ground_offset;
+	if(ground_offset < -8){
+		ground_offset = 0;
+	}
 	map(0, 0, (win_width / 8 )+2, 3, ground_offset, win_height - (8 * 2))
 
 	// update playe
@@ -342,9 +411,34 @@ function game() {
 	if(key(_key_2)){
 		obstacle_manager.spawn_obstacle(2);
 	}
+	if(key(_key_3)){
+		// smoke(50,50,5,5);
+		obstacle_manager.spawn_obstacle(3);
+
+	}
+
+	obstacle_manager.spawnRandomObstacle();
 
 	obstacle_manager.update();
 	obstacle_manager.draw();
+
+	// also do any entities
+	if(entities.length > 0){
+		for(var i=0, l=entities.length; i<l; i++){
+			if(entities[i] != undefined){
+				entities[i].update();
+			}
+			if(entities[i] != undefined){
+				entities[i].draw();
+			}
+		}
+	}
+	print("entities.length: " + entities.length,20,20,5);//TEMP
+	
+	var keyboard_byte = peek(0x0FF88);
+	print("keyboard_byte: " + keyboard_byte,20,25,5);//TEMP
+
+
 }
 
 function menu() {
@@ -374,9 +468,99 @@ function TIC() {
 	}
 }
 
+
+function smoke(x,y,wind_velocity,duration){
+
+	// create y many particles
+	var num_particles = 3;
+
+	// for each particles give them a random x and y velocity
+	min_x = -4;
+	max_x = 0;
+	min_y = -4;
+	max_y = 4;
+
+	for(var i=0, l=num_particles; i<l; i++){
+		
+		rand_x_velocity = Math.floor(Math.random() * (max_x - min_x + 1)) + min_x;
+		rand_y_velocity = Math.floor(Math.random() * (max_y - min_y + 1)) + min_y;
+
+		var smokeEntity = {
+			x:x,
+			y:y,
+			x_velocity:rand_x_velocity,
+			y_velocity:rand_y_velocity,
+			wind_velocity:wind_velocity,
+			duration:duration,
+			delete: false,
+			update: function(){
+
+				this.x += this.x_velocity;
+				this.y += this.y_velocity;
+
+				if(this.x < -4) this.delete = true;
+				if(this.y < -4) this.delete = true;
+				if(this.x > win_width+4) this.delete = true;
+				if(this.y > win_height+4) this.delete = true;
+
+				this.x--;
+				
+
+				if(this.delete){ // delete self
+					for(var i=0, l=entities.length; i<l; i++){
+						if(this == entities[i]){
+							entities.splice(i,1);
+						}
+					}
+				}
+			},
+			draw: function(){
+				pix(this.x+1,this.y,10);
+				pix(this.x-1,this.y,10);
+				pix(this.x,this.y+1,10);
+				pix(this.x,this.y-1,10);
+			}
+		}
+
+		entities.push(smokeEntity);
+	}
+	
+}
+
+
 // <TILES>
 // 000:3333333333737737773773777737777773777737777777777737777777777773
+// 001:3333333333737737773773777737777773777737777777777737777777777773
+// 002:3333333333737737773773777737777773777737777777777737777777777773
+// 003:3333333333737737773773777737777773777737777777777737777777777773
+// 004:3333333333737737773773777737777773777737777777777737777777777773
+// 005:3333333333737737773773777737777773777737777777777737777777777773
+// 006:3333333333737737773773777737777773777737777777777737777777777773
+// 007:3333333333737737773773777737777773777737777777777737777777777773
+// 008:3333333333737737773773777737777773777737777777777737777777777773
+// 009:3333333333737737773773777737777773777737777777777737777777777773
+// 010:3333333333737737773773777737777773777737777777777737777777777773
+// 011:3333333333737737773773777737777773777737777777777737777777777773
+// 012:3333333333737737773773777737777773777737777777777737777777777773
+// 013:3333333333737737773773777737777773777737777777777737777777777773
+// 014:3333333333737737773773777737777773777737777777777737777777777773
+// 015:3333333333737737773773777737777773777737777777777737777777777773
 // 016:7777777777777777777777777777777777777777777777777777777777777777
+// 017:7777777777777777777777777777777777777777777777777777777777777777
+// 018:7777777777777777777777777777777777777777777777777777777777777777
+// 019:7777777777777777777777777777777777777777777777777777777777777777
+// 020:7777777777777777777777777777777777777777777777777777777777777777
+// 021:7777777777777777777777777777777777777777777777777777777777777777
+// 022:7777777777777777777777777777777777777777777777777777777777777777
+// 023:7777777777777777777777777777777777777777777777777777777777777777
+// 024:7777777777777777777777777777777777777777777777777777777777777777
+// 025:7777777777777777777777777777777777777777777777777777777777777777
+// 026:7777777777777777777777777777777777777777777777777777777777777777
+// 027:7777777777777777777777777777777777777777777777777777777777777777
+// 028:7777777777777777777777777777777777777777777777777777777777777777
+// 029:7777777777777777777777777777777777777777777777777777777777777777
+// 030:7777777777777777777777777777777777777777777777777777777777777777
+// 031:7777777777777777777777777777777777777777777777777777777777777777
 // </TILES>
 
 // <SPRITES>

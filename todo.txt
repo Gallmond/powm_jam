@@ -1,5 +1,16 @@
 //TODO
-- animate ground
-- animate sky obstacle (and make reusable animation code)
+
+x animate sky obstacle (and make reusable animation code)
 - rules around frequency and position
 - auto obstacles
+- collison
+- death screen
+- score
+
+//BUGS
+- ground does not slide at correct pace (or obstacles dont?)
+- the up key returns true but is not triggering jump if statement?
+
+//notes
+How often can obstacles randomly spawn
+- not within one second of last obstacle
