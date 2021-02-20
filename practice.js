@@ -231,6 +231,9 @@ function create_player() {
 	this.sprite_h = 2;
 	this.opaque_col = 15;
 	this.sprite_scale = 2;
+	this.sprite_flip = 0;
+
+	this.movement_disabled = false;
 
 	// collision is relative to the sprites position (ie, top left of the sprite) not the screen
 	this.collision_x = 2 * this.sprite_scale;
@@ -257,6 +260,7 @@ function create_player() {
 	}
 	
 	this.move = function(){
+		if(this.movement_disabled) return;
 		if(key(_key_space) || key(_key_up)){
 			this.jump();
 		}
@@ -266,6 +270,49 @@ function create_player() {
 		if(key(_key_right)){
 			this.x+= this.x_speed;
 		}
+	}
+
+	this.is_exploded = false;
+	this.explode = function(){
+
+		if(!this.is_exploded){
+			this.is_exploded = true;
+
+			// disable player controls
+			this.movement_disabled = true;
+		
+			// replace with exploded sprite
+			this.sprite_flip = 2;
+
+			// make explosion
+			explosion(this.x, this.y, this);
+
+			// stop background moving
+			_ground_speed = 0;
+
+			// print message
+			// print("text",x,y,color,fixed,scale);
+			
+			var text_content = "YOU CRASHED!"
+			var text_width = print(text_content,-20,-20);
+
+			var temp_entity = {
+				text_colour: 11,
+				text_content: text_content,
+				text_width: text_width,
+				text_scale: 3,
+				update: function(){},
+				draw: function(){
+					print(this.text_content, (win_width/2) - (this.text_width*this.text_scale/2),win_height/3,this.text_colour,false,this.text_scale);
+				}
+			}
+			entities.push(temp_entity);
+
+			
+		}
+
+
+
 	}
 
 	this.check_collisions = function(){
@@ -294,6 +341,7 @@ function create_player() {
 				rect(x1,y1,w1,h1,11);
 				rect(x2,y2,w2,h2,11);
 				//TODO DO SOMETHING
+				this.explode();
 			}
 		}
 	}
@@ -358,7 +406,7 @@ function create_player() {
 			this.y,
 			this.opaque_col,
 			this.sprite_scale, // scale
-			0, // flip
+			this.sprite_flip, // scale
 			0, // rotate
 			this.sprite_w,
 			this.sprite_h
@@ -466,25 +514,89 @@ function TIC() {
 	if (state === 'game') {
 		game();
 	}
+	if (state === 'exploded') {
+		dead();
+	}
+}
+
+function dead(){
+	
+
 }
 
 
-function smoke(x,y,wind_velocity,duration){
+function explosion(x,y,parent_entity){
 
+	var explosion_entity = {
+		parent_entity: parent_entity,
+		x: x,
+		y: y,
+		animation_speed : 12, // frames per second
+		animation_frame : 0,
+		animation_last_frame : time(),
+		sprite_ids : [
+			258,
+			260,
+			262,
+			264,
+			266,
+		],
+		sprite_scale:2,
+		delete: false,
+		update: function(){
+			// if this has a parent, which has x and y, use thos
+			if(this.parent_entity){
+				if(this.parent_entity.x) this.x = this.parent_entity.x;
+				if(this.parent_entity.y) this.y = this.parent_entity.y;
+			}
+			var delta = time() - this.animation_last_frame;
+			var diff = 1000 / this.animation_speed;
+			// has enough time pased to move onto the next frame?
+			if(delta > diff){
+				var new_frame = this.animation_frame + 1;
+				this.animation_frame = new_frame % this.sprite_ids.length
+				this.animation_last_frame = time();
+			}
+			// delete if I fall out of screen
+			if(this.x < -4) this.delete = true;
+			if(this.y < -4) this.delete = true;
+			if(this.x > win_width+4) this.delete = true;
+			if(this.y > win_height+4) this.delete = true;
+			if(this.delete){ // delete self
+				for(var i=0, l=entities.length; i<l; i++){
+					if(this == entities[i]){
+						entities.splice(i,1);
+					}
+				}
+			}
+		},
+		draw: function(){
+			spr(this.sprite_ids[this.animation_frame],
+				this.x,
+				this.y,
+				_alpha_color,
+				this.sprite_scale,
+				0, // flip
+				0, // rotate
+				2, // cell_width
+				2 // cell_height
+				);
+		}
+	}
+	entities.push(explosion_entity);
+}
+
+function smoke(x,y,wind_velocity,duration){
 	// create y many particles
 	var num_particles = 3;
-
 	// for each particles give them a random x and y velocity
 	min_x = -4;
 	max_x = 0;
 	min_y = -4;
 	max_y = 4;
-
 	for(var i=0, l=num_particles; i<l; i++){
-		
 		rand_x_velocity = Math.floor(Math.random() * (max_x - min_x + 1)) + min_x;
 		rand_y_velocity = Math.floor(Math.random() * (max_y - min_y + 1)) + min_y;
-
 		var smokeEntity = {
 			x:x,
 			y:y,
@@ -494,18 +606,13 @@ function smoke(x,y,wind_velocity,duration){
 			duration:duration,
 			delete: false,
 			update: function(){
-
 				this.x += this.x_velocity;
 				this.y += this.y_velocity;
-
 				if(this.x < -4) this.delete = true;
 				if(this.y < -4) this.delete = true;
 				if(this.x > win_width+4) this.delete = true;
 				if(this.y > win_height+4) this.delete = true;
-
 				this.x--;
-				
-
 				if(this.delete){ // delete self
 					for(var i=0, l=entities.length; i<l; i++){
 						if(this == entities[i]){
@@ -521,10 +628,8 @@ function smoke(x,y,wind_velocity,duration){
 				pix(this.x,this.y-1,10);
 			}
 		}
-
 		entities.push(smokeEntity);
 	}
-	
 }
 
 
@@ -566,8 +671,28 @@ function smoke(x,y,wind_velocity,duration){
 // <SPRITES>
 // 000:ffffffffffffffffffffffddfffffdddffffddddffffdddcffffddd5666fdd55
 // 001:ffffffffffffffffffffffffcfffffffcfffffffcffffffffffffffffff0ffff
+// 002:ffffffffffffffffffffffffffffffffffff6ffffff696ffffff6fffffffffff
+// 003:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 004:fffffffffffffffffffffffffff999fffff9699ffff9969ffff9999fffffffff
+// 005:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 006:fffffffffffffffffffffffffff5555ffff56995ff559695ff599995f5596995
+// 007:ffffffffffffffffffffffffff555fffff566fffff556ffffff55fffffffffff
+// 008:fffffffffffffffffff5555fff55965fff55955ffff555ffffffffffffffffff
+// 009:ffffffffff5555ffff5695ffff5555ffffffffffffffffffffffffffffffffff
+// 010:f555ffff55ffffff5fffffffffffffffffffffffffffffffffffffffffffffff
+// 011:fff5555ffffff95fffffff5fffffffffffffffffffffffffffffffffffffffff
 // 016:f6ffdd55ff6fdf55f66666e6ff66666eff006666f0000666f0000fffff00ffff
 // 017:5fc0ffff5cff6fff6666ffff666666ffeeeee00f66660000ffff0000fffff00f
+// 018:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 019:ffffffffffffffffffffffffffffffffff6ffffff696ffffff6fffffffffffff
+// 020:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 021:fffffffffffffffffffffffff999ffff9969ffff9999fffff969ffffff9fffff
+// 022:f5996999f5996999ff556996fff55999ffff5599fffff596fffff566fffff665
+// 023:55fff6ff655556ff6999965f96999655696999556999995f9969555f55555fff
+// 024:ff555fffff5955ffff55655ffff5695fffff595fffff565ffffff5ffffffffff
+// 025:fffff55fff55555ffff5595ff559996ff599995ff569995ff555555fffffffff
+// 026:ffffffffffffffffff9ffffff55fffffff56fffffff5fffffff56fffffff5fff
+// 027:fffffffffffffffffffffffffffffffffffffff6ffffff95ffff9995ff555555
 // 032:fffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffff7
 // 033:fffffff7ffffff73fffff733fffff733f77ff7337337f7333333773333337733
 // 034:7fffffff37ffffff337fffff337fffff337fffff337fffff337fffff337ff77f
