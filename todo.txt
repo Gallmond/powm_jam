@@ -6,6 +6,7 @@ x animate sky obstacle (and make reusable animation code)
 - collison
 - death screen
 - score
+- seconds alive to two decimal places
 
 //BUGS
 - ground does not slide at correct pace (or obstacles dont?)
