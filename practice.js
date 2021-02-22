@@ -32,7 +32,7 @@ var _alpha_color = 15;
 
 // var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
 var _ground_speed = 2; // pixels per frame the obstacles and ground moves
-var _difficulty_modifier = 0;
+var last_set_second = 0;
 
 var _min_obstacle_gap = 1000; // minimum possible milliseconds between obstacles
 
@@ -633,15 +633,20 @@ function game() {
 		print(String(score),5,5,3);
 	}
 	
-	// if(_ground_speed!=0){
-	// 	// increase difficulty
-	// 	var now = time();
-	// 	var seconds = Math.floor(now / 1000); // seconds passed
-	// 	if(seconds !== 0 && seconds % 5 === 0){ // this fires _every_ frame this is true, (ie 60 times while in this valid second)
-	// 		var new_ground_speed = _ground_speed + 0.1
-	// 	}
-	// 	print("speed: " + _ground_speed,12,12,12);
-	// }
+	if(_ground_speed!=0){
+		// increase difficulty
+		var now = time();
+		var seconds = Math.floor(now / 1000); // seconds passed
+		if(
+			seconds !== 0 && 
+			seconds % 5 === 0 && 
+			last_set_second !== seconds
+		){
+			_ground_speed += 0.1
+			last_set_second = seconds;
+		}
+		//print("speed: " + _ground_speed,12,12,12);
+	}
 
 
 	// var keyboard_byte = peek(0x0FF88);
