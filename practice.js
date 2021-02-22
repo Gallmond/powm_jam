@@ -30,8 +30,9 @@ var win_height = 136;
 
 var _alpha_color = 15;
 
-// var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
-var _ground_speed = 2; // pixels per frame the obstacles and ground moves
+var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
+var seconds_between_increase = 5;
+var speed_increase = 0.1;
 var last_set_second = 0;
 
 var _min_obstacle_gap = 1000; // minimum possible milliseconds between obstacles
@@ -639,15 +640,20 @@ function game() {
 		var seconds = Math.floor(now / 1000); // seconds passed
 		if(
 			seconds !== 0 && 
-			seconds % 5 === 0 && 
+			seconds % seconds_between_increase === 0 && 
 			last_set_second !== seconds
 		){
-			_ground_speed += 0.1
+			_ground_speed += speed_increase;
 			last_set_second = seconds;
 		}
 		//print("speed: " + _ground_speed,12,12,12);
 	}
 
+
+	if(key(_key_0)){
+		print("_ground_speed: " + _ground_speed,5,10,2);
+		print("entites.length: " + entities.length,5,15 + 1,2);
+	}
 
 	// var keyboard_byte = peek(0x0FF88);
 	// print("keyboard_byte: " + keyboard_byte,20,25,5);//TEMP
