@@ -30,18 +30,13 @@ var win_height = 136;
 
 var _alpha_color = 15;
 
-var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
+// var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
+var _ground_speed = 2; // pixels per frame the obstacles and ground moves
+var _difficulty_modifier = 0;
 
 var _min_obstacle_gap = 1000; // minimum possible milliseconds between obstacles
 
-// laters bottom/mid/top are 0,1,2
-// var OBSTACLES = [
-// 	{
-// 		name:'cactus',
-// 		layer:0
-// 		// sprite_id:
-// 	}
-// ]
+var _game_start_time = false;
 
 // returns true if the bounding boxes overlap
 function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
@@ -55,7 +50,7 @@ function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
 
 
 
-function create_obstacle_manager(){
+function obstacleManager(){
 
 	// define possible obstacles here
 	this.OBSTACLE_LIST = [
@@ -84,16 +79,76 @@ function create_obstacle_manager(){
 			collision_h: 18,
 		},
 		{
-			name:'bird',
-			spr_id:352,
-			resting_y: win_height / 4,
-			spr_w: 4, // number of sprites wide composite sprite is
+			name:'dad1',
+			spr_id:296, // id of sprite
+			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
+			spr_h: 4,
+			spr_scale:1, // scale of sprite
+			collision_x: 3, // colliding area relative to sprite only
+			collision_y: 1,
+			collision_w: 10,
+			collision_h: 31,
+		},
+		{
+			name:'dad1',
+			spr_id:298, // id of sprite
+			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
+			spr_h: 4,
+			spr_scale:1, // scale of sprite
+			collision_x: 3, // colliding area relative to sprite only
+			collision_y: 1,
+			collision_w: 10,
+			collision_h: 31,
+		},
+		{
+			name:'dad2',
+			spr_id:300, // id of sprite
+			resting_y: win_height - (8*4) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
+			spr_h: 4,
+			spr_scale:1, // scale of sprite
+			collision_x: 3, // colliding area relative to sprite only
+			collision_y: 1,
+			collision_w: 10,
+			collision_h: 31,
+		},
+		{
+			name:'rock1',
+			spr_id:364, // id of sprite
+			resting_y: win_height - (8*2) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
 			spr_h: 2,
 			spr_scale:1, // scale of sprite
-			collision_x: 6, // colliding area relative to sprite only
-			collision_y: 2,
+			collision_x: 1, // colliding area relative to sprite only
+			collision_y: 4,
 			collision_w: 11,
-			collision_h: 14,
+			collision_h: 11,
+		},
+		{
+			name:'rock2',
+			spr_id:366, // id of sprite
+			resting_y: win_height - (8*2) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
+			spr_h: 2,
+			spr_scale:1, // scale of sprite
+			collision_x: 2, // colliding area relative to sprite only
+			collision_y: 8,
+			collision_w: 10,
+			collision_h: 8,
+		},
+		{
+			name:'rock3',
+			spr_id:396, // id of sprite
+			resting_y: win_height - (8*2) - (8*2) + 3, // floor height, sprite height, then offset
+			spr_w: 2, // number of sprites wide composite sprite is
+			spr_h: 2,
+			spr_scale:1, // scale of sprite
+			collision_x: 1, // colliding area relative to sprite only
+			collision_y: 7,
+			collision_w: 8,
+			collision_h: 8,
 		},
 		{
 			name:'bird',
@@ -122,6 +177,34 @@ function create_obstacle_manager(){
 			collision_y: 2,
 			collision_w: 11,
 			collision_h: 14,
+		},
+		{
+			name:'dog',
+			state:'idle',
+			animation_speed: 2, // frames per second, ie how fast to cycle through the below
+			animation_frame: 0, // which frame to display
+			animation_last_frame: time(), // time() of last animation
+			sprites:{
+				'idle':[
+					{
+						spr_id:360,
+						spr_w: 2, // number of sprites wide composite sprite is
+						spr_h: 2,
+						spr_scale:1, // scale of sprite
+					},
+					{
+						spr_id:362,
+						spr_w: 2, // number of sprites wide composite sprite is
+						spr_h: 2,
+						spr_scale:1, // scale of sprite
+					}
+				]
+			},
+			resting_y: win_height - (8*2) - (8*2), // ground sprites, this sprites,
+			collision_x: 1, // colliding area relative to sprite only
+			collision_y: 4,
+			collision_w: 14,
+			collision_h: 12,
 		}
 	];
 
@@ -130,8 +213,15 @@ function create_obstacle_manager(){
 	this.spawnRandomObstacle = function(){
 		var now = time();
 		var diff = now - this.last_obstacle_spawned;
+		// only if min time has passed, one in X chance of spawning
 		if(diff > min_time_between_obstacles){
-			this.spawn_obstacle();
+
+			// function returns a floating-point, pseudo-random number 
+			// in the range 0 to less than 1 (inclusive of 0, but not 1) 
+			if(Math.random() < 0.05){
+				this.spawn_obstacle();
+			}
+
 		}
 	}
 
@@ -225,13 +315,14 @@ function create_obstacle_manager(){
 }
 var obstacle_manager = false;
 
-function create_player() {
+function Player() {
 	this.sprite_id = 256;
 	this.sprite_w = 2;
 	this.sprite_h = 2;
 	this.opaque_col = 15;
 	this.sprite_scale = 2;
 	this.sprite_flip = 0;
+	this.actual_sprite_width = (8 * this.sprite_w) * this.sprite_scale;
 
 	this.movement_disabled = false;
 
@@ -270,6 +361,12 @@ function create_player() {
 		if(key(_key_right)){
 			this.x+= this.x_speed;
 		}
+
+		// do not allow the player to move within 5 pixels of either side
+		if(this.x < 0) this.x = 0;
+		if(this.x > win_width - this.actual_sprite_width) this.x = win_width - this.actual_sprite_width;
+
+
 	}
 
 	this.is_exploded = false;
@@ -286,17 +383,15 @@ function create_player() {
 
 			// make explosion
 			explosion(this.x, this.y, this);
+			shake(2,200);
 
 			// stop background moving
 			_ground_speed = 0;
 
-			// print message
-			// print("text",x,y,color,fixed,scale);
-			
+			// print game over message
 			var text_content = "YOU CRASHED!"
 			var text_width = print(text_content,-20,-20);
-
-			var temp_entity = {
+			var gameover_text_entity = {
 				text_colour: 11,
 				text_content: text_content,
 				text_width: text_width,
@@ -306,9 +401,28 @@ function create_player() {
 					print(this.text_content, (win_width/2) - (this.text_width*this.text_scale/2),win_height/3,this.text_colour,false,this.text_scale);
 				}
 			}
-			entities.push(temp_entity);
+			entities.push(gameover_text_entity);
 
+			// print score
+			var now = time();
+			var diff = now - _game_start_time;
+			var seconds = (diff / 1000).toFixed(2);
+			var score_text_content = "Score: " + seconds;
+			var score_text_width = print(score_text_content,-20,-20);
+			var score_text_entity = {
+				text_colour: 11,
+				text_content: score_text_content,
+				text_width: score_text_width,
+				text_scale: 3,
+				update: function(){},
+				draw: function(){
+					print(this.text_content, (win_width/2) - (this.text_width*this.text_scale/2),(win_height/3)+6*this.text_scale,this.text_colour,false,this.text_scale);
+				}
+			}
+			entities.push(score_text_entity);
 			
+
+
 		}
 
 
@@ -337,10 +451,10 @@ function create_player() {
 			var h2 = this_obstacle.collision_h;
 
 			if(bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2)){
-				print("IS COLLIDING", 5,5,11);
-				rect(x1,y1,w1,h1,11);
-				rect(x2,y2,w2,h2,11);
-				//TODO DO SOMETHING
+				// collision debug
+				// print("IS COLLIDING", 5,5,11);
+				// rect(x1,y1,w1,h1,11);
+				// rect(x2,y2,w2,h2,11);
 				this.explode();
 			}
 		}
@@ -370,9 +484,16 @@ function create_player() {
 		if(this.y_velocity < this.y_gravity){
 				this.y_velocity = this.y_gravity;
 		}
+
+		var new_y = this.y + this.y_velocity;
+
+		// if new y would be on or below ground, but current y is not, shake
+		if(new_y >= this.resting_y && this.y < this.resting_y){
+			impact(4,200);
+		}
+
 		// if new position would be in the
 		//  ground, set to ground
-		var new_y = this.y + this.y_velocity;
 		if(new_y >= this.resting_y){
 			this.y = this.resting_y;
 		}else{
@@ -419,18 +540,60 @@ var player = false;
 
 var entities = [];
 var ground_offset = 0;
+var clouds = [];
 function game() {
+	var game_now = time();
+
 	// create player
 	if (player === false) {
-		player = new create_player();
+		player = new Player();
 	}
 	// create obstacle manager
 	if (obstacle_manager === false) {
-		obstacle_manager = new create_obstacle_manager();
+		obstacle_manager = new obstacleManager();
+	}
+	// set game start time
+	if(_game_start_time === false){
+		_game_start_time = time();
 	}
 
 	// clear screen
 	cls(15);
+
+
+	// draw background
+	if(clouds.length===0){
+		//init clouds
+		var cloud_percent_separate = 0.2;
+		var cloud_distance = Math.floor(win_width * cloud_percent_separate)
+		var cloud_count = win_width/cloud_distance + 100; // lazy
+		for(var i = 0, l = cloud_count; i < l; i++){
+			clouds.push({
+				x_offset: cloud_distance * i,
+				sprite_id: 384,
+				sprite_w: 4,
+				sprite_h: 4,
+			});
+		}
+	}else{
+		for(var i=0, l=clouds.length; i<l; i++){
+			// spr(id,x,y,alpha_color,scale,flip,rotate,cell_width,cell_height);
+			clouds[i].x_offset-= (_ground_speed / 6)
+			spr(clouds[i].sprite_id,
+				clouds[i].x_offset,
+				i % 2 == 0 ? Math.floor(win_height/5) : Math.floor(win_height/5) -15,
+				_alpha_color,
+				1,
+				0,
+				0,
+				clouds[i].sprite_w,
+				clouds[i].sprite_h);
+		}
+		if(clouds[clouds.length-1].x_offset < 0 - (8*clouds[clouds.length-1].sprite_w) ){
+			clouds = [];// reset
+		}
+	}
+
 
 	// draw ground
 	// map(cell_x,cell_y,cell_w,cell_h,x,y,alpha_color,scale,remap);
@@ -446,27 +609,8 @@ function game() {
 	// draw player
 	player.draw();
 
-	// TEMP
-	if(key(_key_space) && obstacle_manager.current_obstacles.length < 1){
-		obstacle_manager.spawn_obstacle();
-	}
-	if(key(_key_0)){
-		obstacle_manager.spawn_obstacle(0);
-	}
-	if(key(_key_1)){
-		obstacle_manager.spawn_obstacle(1);
-	}
-	if(key(_key_2)){
-		obstacle_manager.spawn_obstacle(2);
-	}
-	if(key(_key_3)){
-		// smoke(50,50,5,5);
-		obstacle_manager.spawn_obstacle(3);
-
-	}
-
+	// spawn obstacle? 
 	obstacle_manager.spawnRandomObstacle();
-
 	obstacle_manager.update();
 	obstacle_manager.draw();
 
@@ -481,10 +625,27 @@ function game() {
 			}
 		}
 	}
-	print("entities.length: " + entities.length,20,20,5);//TEMP
+	// print("entities.length: " + entities.length,20,20,5);//TEMP
 	
-	var keyboard_byte = peek(0x0FF88);
-	print("keyboard_byte: " + keyboard_byte,20,25,5);//TEMP
+	//write score
+	if(!player.movement_disabled){
+		var score = ((game_now - _game_start_time) / 1000).toFixed(2);
+		print(String(score),5,5,3);
+	}
+	
+	// if(_ground_speed!=0){
+	// 	// increase difficulty
+	// 	var now = time();
+	// 	var seconds = Math.floor(now / 1000); // seconds passed
+	// 	if(seconds !== 0 && seconds % 5 === 0){ // this fires _every_ frame this is true, (ie 60 times while in this valid second)
+	// 		var new_ground_speed = _ground_speed + 0.1
+	// 	}
+	// 	print("speed: " + _ground_speed,12,12,12);
+	// }
+
+
+	// var keyboard_byte = peek(0x0FF88);
+	// print("keyboard_byte: " + keyboard_byte,20,25,5);//TEMP
 
 
 }
@@ -492,8 +653,8 @@ function game() {
 function menu() {
 	cls(15);
 	print("Billie Eilish Kart", 5, 5, 0, false, 2);
-	print("Press [s] key to start!", 5, 20, 0);
-	print("[r] key to return to menu.", 5, 30, 0);
+	print("Press [s] key to begin!", 5, 20, 0);
+	print("[r] key to restart the game.", 5, 30, 0);
 	if (key(_key_s)) {
 		state = 'game';
 	}
@@ -502,7 +663,7 @@ function menu() {
 function mainControls() {
 	// return to menu
 	if (key(18)) { // R
-		state = 'menu';
+		reset();
 	}
 };
 
@@ -514,19 +675,10 @@ function TIC() {
 	if (state === 'game') {
 		game();
 	}
-	if (state === 'exploded') {
-		dead();
-	}
-}
-
-function dead(){
-	
-
 }
 
 
 function explosion(x,y,parent_entity){
-
 	var explosion_entity = {
 		parent_entity: parent_entity,
 		x: x,
@@ -586,6 +738,79 @@ function explosion(x,y,parent_entity){
 	entities.push(explosion_entity);
 }
 
+// basically the same as a screen shake but it's just a downwards dent
+function impact(intensity, duration){
+	var hit_entity = {
+		intensity: intensity,
+		duration: duration,
+		started:false,
+		delete: false,
+		update: function(){
+			if(!this.started){
+				this.started = time();
+			}
+			var now = time();
+			if(now - this.started > duration || this.intensity === 0){
+				this.delete = true;
+				memset(0x3FF9,0,2); // reset screen shake
+			}
+			
+			this.intensity--;
+
+			if(this.delete){ // delete self
+				for(var i=0, l=entities.length; i<l; i++){
+					if(this == entities[i]){
+						entities.splice(i,1);
+					}
+				}
+			}
+		},
+		draw: function(){
+			// start at max dent, then slowly decrease
+			poke(0x3FF9+1,this.intensity*-1);
+		}
+	}
+	entities.push(hit_entity);
+}
+
+function shake(intensity, duration){
+	var shake_entity = {
+		intensity: intensity,
+		duration: duration,
+		started:false,
+		delete: false,
+		update: function(){
+			if(!this.started){
+				this.started = time();
+			}
+			var now = time();
+			if(now - this.started > duration){
+				this.delete = true;
+				// reset screen shake
+				memset(0x3FF9,0,2);
+			}
+			if(this.delete){ // delete self
+				for(var i=0, l=entities.length; i<l; i++){
+					if(this == entities[i]){
+						entities.splice(i,1);
+					}
+				}
+			}
+		},
+		draw: function(){
+			// do shake
+			min = 0;
+			max = this.intensity;
+			var x_rand = Math.floor(Math.random() * (max - min + 1)) + min;
+			var y_rand = Math.floor(Math.random() * (max - min + 1)) + min;
+			poke(0x3FF9,x_rand);
+			poke(0x3FF9+1,y_rand);
+		}
+	}
+	entities.push(shake_entity);
+}
+
+
 function smoke(x,y,wind_velocity,duration){
 	// create y many particles
 	var num_particles = 3;
@@ -635,37 +860,7 @@ function smoke(x,y,wind_velocity,duration){
 
 // <TILES>
 // 000:3333333333737737773773777737777773777737777777777737777777777773
-// 001:3333333333737737773773777737777773777737777777777737777777777773
-// 002:3333333333737737773773777737777773777737777777777737777777777773
-// 003:3333333333737737773773777737777773777737777777777737777777777773
-// 004:3333333333737737773773777737777773777737777777777737777777777773
-// 005:3333333333737737773773777737777773777737777777777737777777777773
-// 006:3333333333737737773773777737777773777737777777777737777777777773
-// 007:3333333333737737773773777737777773777737777777777737777777777773
-// 008:3333333333737737773773777737777773777737777777777737777777777773
-// 009:3333333333737737773773777737777773777737777777777737777777777773
-// 010:3333333333737737773773777737777773777737777777777737777777777773
-// 011:3333333333737737773773777737777773777737777777777737777777777773
-// 012:3333333333737737773773777737777773777737777777777737777777777773
-// 013:3333333333737737773773777737777773777737777777777737777777777773
-// 014:3333333333737737773773777737777773777737777777777737777777777773
-// 015:3333333333737737773773777737777773777737777777777737777777777773
 // 016:7777777777777777777777777777777777777777777777777777777777777777
-// 017:7777777777777777777777777777777777777777777777777777777777777777
-// 018:7777777777777777777777777777777777777777777777777777777777777777
-// 019:7777777777777777777777777777777777777777777777777777777777777777
-// 020:7777777777777777777777777777777777777777777777777777777777777777
-// 021:7777777777777777777777777777777777777777777777777777777777777777
-// 022:7777777777777777777777777777777777777777777777777777777777777777
-// 023:7777777777777777777777777777777777777777777777777777777777777777
-// 024:7777777777777777777777777777777777777777777777777777777777777777
-// 025:7777777777777777777777777777777777777777777777777777777777777777
-// 026:7777777777777777777777777777777777777777777777777777777777777777
-// 027:7777777777777777777777777777777777777777777777777777777777777777
-// 028:7777777777777777777777777777777777777777777777777777777777777777
-// 029:7777777777777777777777777777777777777777777777777777777777777777
-// 030:7777777777777777777777777777777777777777777777777777777777777777
-// 031:7777777777777777777777777777777777777777777777777777777777777777
 // </TILES>
 
 // <SPRITES>
@@ -701,6 +896,12 @@ function smoke(x,y,wind_velocity,duration){
 // 037:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 038:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 039:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 040:ffffff33ffffff13ffffff33ffffff33ffffff31fffffff3fffff555ffff5666
+// 041:3333ffff3444ffff3333ffff1333ffff1333ffff3333ffff5553ffff6655ffff
+// 042:ffffff33ffffff13ffffff33ffffff33ffffff31fffffff3fffff999ffff9eee
+// 043:3333ffff3444ffff3333ffff1333ffff1333ffff3333ffff9993ffffee99ffff
+// 044:ffffff33ffffff13ffffff33ffffff33ffffff31fffffff3fffff222ffff2888
+// 045:3333ffff3444ffff3333ffff1333ffff1333ffff3333ffff2223ffff8822ffff
 // 048:fffffff7fffffff7fffffff7fffffff7fffffff7fffffff7fffffff7ffffffff
 // 049:3333773333337733333377333333773333337733333377333333773373333333
 // 050:337f733733773333337733333377333333773333337733333377333333773333
@@ -709,6 +910,12 @@ function smoke(x,y,wind_velocity,duration){
 // 053:ffffffffffffffffffffffffffffffffff777777f7a333337aaaaaaa7a7777aa
 // 054:ffffffffffffffffffffffffffffffff77ffffff377777ffaa333377aaaaaa33
 // 055:ffffffffffffffffffffffffffffffffffffffffffffffff7fffffff37ffffff
+// 056:fff56666ff566666f5666666f5666666f5666666f5566666ff556666ffff5555
+// 057:66665fff55555fff63365fff63365fff63365fff33365fff63365fff5555ffff
+// 058:fff9eeeeff9eeeeef9eeeeeef9eeeeeef9eeeeeef99eeeeeff99eeeeffff9999
+// 059:eeee9fff99999fffe33e9fffe33e9fffe33e9fff333e9fffe33e9fff9999ffff
+// 060:fff28888ff288888f2888888f2888888f2888888f2288888ff228888ffff2222
+// 061:88882fff22222fff83382fff83382fff83382fff33382fff83382fff2222ffff
 // 064:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 065:f7333333ff733333fff77733fffff733fffff733fffff733fffff733fffff733
 // 066:33773333333333373333337f333337ff33777fff337fffff337fffff337fffff
@@ -717,6 +924,12 @@ function smoke(x,y,wind_velocity,duration){
 // 069:f7759477f5959449f7b7b7bdf7baaaaaf7baaaaaf7ab7aa3f7a3baa3f7a37aa3
 // 070:77a4aaaadd4777a774777777aaaaaa37aaaaaa377a37aa117a37aa117a37a331
 // 071:a7ffffff7fffffffffffffffffffffffffffffff111fffff111fffff11ffffff
+// 072:ffff1f11ffff1111ffff2228ffff2228ffff2222ffff2222ffff2222ffff2222
+// 073:1111ffff1111ffff22222fff82222fff88222fff28822fff22222fff2222ffff
+// 074:ffff1f11ffff1111ffff2228ffff2228ffff2222ffff2222ffff2222ffff2222
+// 075:1111ffff1111ffff22222fff82222fff88222fff28822fff22222fff2222ffff
+// 076:ffff1f11ffff1111ffff2228ffff2228ffff2222ffff2222ffff2222ffff2222
+// 077:1111ffff1111ffff22222fff82222fff88222fff28822fff22222fff2222ffff
 // 080:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 081:fffff733fffff733fffff733fffff733fffff733f7fff733737ff733f7ffff77
 // 082:337fffff337fffff337fffff337fffff337fffff337fffff337fffff77ffffff
@@ -725,6 +938,12 @@ function smoke(x,y,wind_velocity,duration){
 // 085:ff737aa3ff737aa3ff737aa3ff737aa3ff737aa3ff7a3aaaff7aaaaafff77777
 // 086:7a37a3bb7a37a1b17a37a1107a37a1107a37a1103aa3a141aaaaa14177777744
 // 087:11ffffff000fffff000fffff0001ffff00011fff000011ff000044ff01001fff
+// 088:ffff2222ffff2222ffff2222ffff2222ffff2222ff444444f4444444f4444444
+// 089:2222ffff2222ffff2222ffff2222ffff2222ffff4444ffff4444ffff4444ffff
+// 090:ffff2222ffff2222ffff2222ffff2222ffff2222ff444444f4444444f4444444
+// 091:2222ffff2222ffff2222ffff2222ffff2222ffff4444ffff4444ffff4444ffff
+// 092:ffff2222ffff2222ffff2222ffff2222ffff2222ff444444f4444444f4444444
+// 093:2222ffff2222ffff2222ffff2222ffff2222ffff4444ffff4444ffff4444ffff
 // 096:fffff77fffff7337fff73337ff733333f73333337333333377777773fffffff7
 // 097:ffffffffffffffffffffffff7fffffff7777777f333333373333333333333333
 // 098:ffffffffffffffffffffffffffffffffffffffffffffffff7777777f3333337f
@@ -733,6 +952,14 @@ function smoke(x,y,wind_velocity,duration){
 // 101:ffffffff7fffffff37ffffff337fffff3337ffff33337fff333337ff7333337f
 // 102:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 103:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 104:ffffffffff7ffff7f76fff76f76fff7677777777777a7777717a717771aaa177
+// 105:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 106:ff7ffff7f76fff76f76fff7677777777777a7777717a717771aaa177aa11aaa7
+// 107:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7777f3
+// 108:ffffffffffffffffffffffffffff3333fff33a43ff33a444ff3a4444f3a44443
+// 109:ffffffffffffffffffffffffffffffff33ffffff311fffff3111ffff1441ffff
+// 110:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff33
+// 111:ffffffffffffffffffffffffffffffffffffffffffffffff333fffffa73fffff
 // 112:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 113:7333333373333333733333337333377773337fff7337ffff737ffffff7ffffff
 // 114:333777ff333337ff33777fff77ffffffffffffffffffffffffffffffffffffff
@@ -741,6 +968,34 @@ function smoke(x,y,wind_velocity,duration){
 // 117:7333337f33333337333333333333333373333333f7333333ff733333fff77777
 // 118:ffffffffffffffff7777777f3333337f333777ff333337ff33777fff77ffffff
 // 119:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 120:aa11aaa7aaa61aa7faa6aa77f3aaa377f7333777f7733773f77ff77ff3fff3ff
+// 121:ff7777f37777777a77777777777777777777777733333777f77ff77ff3fff3ff
+// 122:aaa61aa7faa6aa77f3aaa377f7333777f7733773f77ff77ff77ff77ff3fff3ff
+// 123:7777777a77777777777777777777777733333777f77ff77ff77ff77ff3fff3ff
+// 124:f3444443f3334431331133313a4411143444414431444144f1111144ffffff11
+// 125:14411fff44441fff44441fff44441fff44441fff44441fff44411fff1111ffff
+// 126:ffffff3afffff33afffff3a7ff333377f3a773773a7777373777773733333333
+// 127:7773ffff7773ffff7773ffff77773fff77773fff777773ff777773ff333333ff
+// 128:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 129:fffffff7ffffff7fffff77fffff7fffffff7fffffff7ffffff7ffffff7fff33f
+// 130:77ffffffff7ffffffff7fffffff7f7ffffff7f7ffffffff7ff3ffff7fff3fff7
+// 131:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 140:ffffffffffffffffffffffffffffffffffffffffffffffffff333ffff33a73ff
+// 141:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 144:ffffff77fffff7ffffff7ffffffffffff77fffff7fffffff7fffffffffffffff
+// 145:7fff3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 146:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 147:7ff7ffff7f7f7ffff7ff7fffffff7fffffff7f7ffffff7f7fffffff7ffffff77
+// 156:f3a7773ff3a777733a77777a3a77777a377777a73777777733377777ff333333
+// 157:ffffffffffffffff3fffffff3fffffff73ffffff773fffff333fffffffffffff
+// 160:f7ffffffff7ff3fffff7ff3fffff7ff3ffff7ffffffff777ffffffffffffffff
+// 161:ffffffffffffffffff3fffff3333fff3fff333337ffff33ff7ffffffff77fff7
+// 162:fffffffffff3ffffff3fffff3333ff3f33f333ffffff3fff7ffffff7f77ff77f
+// 163:fffff7ffffff7ffffffff7ffffffff7fffffffffffff77ffff77ffff77ffffff
+// 176:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 177:ffff777fffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 178:ff777fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// 179:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // 255:0000000000000000000000000000000000000000000000000123456789abcdef
 // </SPRITES>
 

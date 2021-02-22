@@ -1,17 +1,13 @@
 //TODO
 
-x animate sky obstacle (and make reusable animation code)
-- rules around frequency and position
-- auto obstacles
-- collison
-- death screen
-- score
-- seconds alive to two decimal places
+[-] more obstacles
+	[-] dog & poop
+	[-] animate dads
+[-] add scrolling background features
+	[-] clouds/trees/houses?
+[x] add screen shake on explosion
+[x] add screed impact on landing
+
 
 //BUGS
-- ground does not slide at correct pace (or obstacles dont?)
-- the up key returns true but is not triggering jump if statement?
-
-//notes
-How often can obstacles randomly spawn
-- not within one second of last obstacle
+- ground not moving at same pace as obstacles
