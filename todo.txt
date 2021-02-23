@@ -1,12 +1,10 @@
 //TODO
 
-[-] more obstacles
-	[-] dog & poop
-	[-] animate dads
-[-] add scrolling background features
-	[-] clouds/trees/houses?
-[x] add screen shake on explosion
-[x] add screed impact on landing
+[-] sounds
+	[-] jump
+	[-] landing
+	[-] explosion
+	[-] MUSIC TRACK
 
 
 //BUGS
