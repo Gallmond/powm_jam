@@ -6,6 +6,8 @@
 // keys
 var _key_space = 48; // space
 var _key_s = 19; // a
+var _key_m = 13; // m
+var _key_n = 14; // n
 var _key_left = 60; // LEFT
 var _key_right = 61; // RIGHT
 var _key_up = 58; // UP
@@ -392,6 +394,8 @@ function Player() {
 			explosion(this.x, this.y, this);
 			shake(2,200);
 			sfx(_sfx_id_explode, 'C-4', 60,3);
+			music_manager.stop();
+			music(2,-1,-1,0,0);
 			
 
 			// stop background moving
@@ -429,6 +433,21 @@ function Player() {
 				}
 			}
 			entities.push(score_text_entity);
+
+			// restart text
+			var restart_text_content = "[r] to restart";
+			var restart_text_width = print(restart_text_content,-20,-20);
+			var restart_text_entity = {
+				text_colour: 11,
+				text_content: restart_text_content,
+				text_width: restart_text_width,
+				text_scale: 1,
+				update: function(){},
+				draw: function(){
+					print(this.text_content, (win_width/2) - (this.text_width*this.text_scale/2),5,this.text_colour,false,this.text_scale);
+				}
+			}
+			entities.push(restart_text_entity);
 			
 
 
@@ -671,46 +690,80 @@ function game() {
 
 }
 
+var _music_ended = false
 var _main_track_started = false;
 var _second_track_started = false;
 var _fired = 0;
 function musicManager(){
 
-	var track = peek(0x13FFC)
-	var frame = peek(0x13FFD)
-	var row = peek(0x13FFE)
-	var flags = peek(0x13FFF)
-	
-	print("track: " + String(track), 5,50,0);
-	print("frame: " + String(frame), 5,56,0);
-	print("row: " + String(row), 5,62,0);
-	print("flags: " + String(flags), 5,68,0);
-	var loop = flags >> 7;
-	print("loop: " + String(loop), 5,74,0);
-	print("_fired: " + String(_fired), 5,80,0);
+	this.playing = true;
 
-	print("flags.toString(2): " + String(flags.toString(2)), 5,86,0);
-
-
-	if(time() < 1000){
-		return;
+	this.reset = function(){
+		_music_ended = false;
+		_main_track_started = false;
+		_second_track_started = false;
 	}
 
-	if(!_main_track_started){
-		// music [track=-1] [frame=-1] [row=-1] [loop=true] [sustain=false]
-		music(0,-1,-1,false,false);
-		_fired++;
-		_main_track_started = true;
-		return;
+	this.stop = function(){
+		music();
+		this.playing = false;
 	}
 
-	// if(_main_track_started && !_second_track_started && track===255){
-	// 	music(1,-1,-1,-1,false,false); aaa
-	// 	_second_track_started = true;
-	// }
+	this.start = function(){
+		this.playing = true;
+		this.reset();
+	}
 
+	this.play = function(){
 
+		// restart
+		if(key(_key_n)){
+			this.start();
+		}
+		if(key(_key_m)){
+			this.stop();
+		}
 
+		if(!this.playing){
+			return;
+		}
+
+		// var track = peek(0x13FFC)
+		// var frame = peek(0x13FFD)
+		// var row = peek(0x13FFE)
+		// var flags = peek(0x13FFF)
+
+		// var yi = 0;
+		// print("track: " + String(track), 5, 50 + (6*yi++), 1);
+		// print("frame: " + String(frame), 5, 50 + (6*yi++), 1);
+		// print("row: " + String(row), 5, 50 + (6*yi++), 1);
+		// print("flags: " + String(flags), 5, 50 + (6*yi++), 1);
+
+		if(time() < 1000){
+			return;
+		}
+
+		if(!_main_track_started){
+			music(0,-1,-1,0,0);
+			_main_track_started = true;
+		}
+
+		var track = peek(0x13FFC)
+
+		if(_main_track_started && !_second_track_started && track===255){
+			music(1,-1,-1,0,0);
+			_second_track_started = true;
+		}
+
+		if(_main_track_started && _second_track_started && track===255){
+			if(_music_ended === false){
+				_music_ended = time();
+			}
+			if(time() - _music_ended > 5000){
+				this.reset();
+			}
+		}
+	}
 }
 
 function menu() {
@@ -718,15 +771,13 @@ function menu() {
 	print("Billie Eilish Kart", 5, 5, 0, false, 2);
 	print("Press [s] key to begin!", 5, 20, 0);
 	print("[r] key to restart the game.", 5, 30, 0);
+
+
+	print("[m] and [n] to stop/start music.", 5, win_height-5-5, 0);
+
 	if (key(_key_s)) {
 		state = 'game';
 	}
-
-	
-	// musicManager();
-	
-
-
 
 }
 
@@ -737,8 +788,12 @@ function mainControls() {
 	}
 };
 
+
+var music_manager = new musicManager();
+
 function TIC() {
 	mainControls();
+	music_manager.play();
 	if (state === 'menu') {
 		menu();
 	}
@@ -1083,8 +1138,8 @@ function smoke(x,y,wind_velocity,duration){
 // 000:b2c0b2c0b2c0b2b0b2a0b2a0b290b290b280b280b280b280b270b270b260b260b260b260b260b250b250b250b250b250b250b250b250b250b250b250a77009000000
 // 001:02000200020002000200020002000200120012002200220032003200420052005200620062007200820082009200a200b200c200c200d200f200f20045a000000000
 // 012:2300230023002300230023002300230033003300430043005300530063006300630073007300830083009300a300b300b300c300d300e300e300f300300000000000
-// 013:c2e0c2d0c2c0c250c250c250c240c240c240c240c240c240c250c250c250c260c260c260c260c270c270c280c280c290c2a0c2a0c2b0c2c0c2d0c2e0325000000000
-// 014:d3b0d3b0e3b0e3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0000000000000
+// 013:62e062d062c062506250625062406240624062406240624062506250625062606260626062606270627062806280629062a062a062b062c062d062e0325000000000
+// 014:83b093b0a3b0c3b0d3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3b0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0f3a0000000000000
 // </SFX>
 
 // <PATTERNS>
@@ -1108,11 +1163,13 @@ function smoke(x,y,wind_velocity,duration){
 // 017:40001a000000b0001a000000b0001a00000040001a000000a0001a000010b0001a000010a0001a00000070001a00000040001a000000b0001a000000b0001a00000040001a000000a0001a000010b0001a000010a0001a00000070001a00000010001000000010001000000010001000000010001000000010001000001010001000001050001a000000e0001a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 // 018:60001a000000d0001a000000d0001a00000060001a000000a0001a00000060001a00000060001a00000040001a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 // 019:600016000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600016000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+// 020:40001a000000e00018000000d55618000000000000000000000010000000000010000000000000000000b99618000000000010000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 // </PATTERNS>
 
 // <TRACKS>
 // 000:0400000400000800000c00005010005010006c10009020005010005010006c10009820005c2000503000643000f83000ce02ff
 // 001:0040005440005440006840004d4000000000000000000000000000000000000000000000000000000000000000000000ce02ff
+// 002:045000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007110
 // </TRACKS>
 
 // <PALETTE>
