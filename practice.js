@@ -771,6 +771,7 @@ function menu() {
 	print("Billie Eilish Kart", 5, 5, 0, false, 2);
 	print("Press [s] key to begin!", 5, 20, 0);
 	print("[r] key to restart the game.", 5, 30, 0);
+	print("Arrow keys & Space to move.", 5, 40, 0);
 
 
 	print("[m] and [n] to stop/start music.", 5, win_height-5-5, 0);
