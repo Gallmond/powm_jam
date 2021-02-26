@@ -1,11 +1,1 @@
 //TODO
-
-[-] sounds
-	[-] jump
-	[-] landing
-	[-] explosion
-	[-] MUSIC TRACK
-
-
-//BUGS
-- ground not moving at same pace as obstacles
