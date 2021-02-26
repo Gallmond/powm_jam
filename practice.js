@@ -27,25 +27,24 @@ var _sfx_id_explode = 12;
 var _sfx_id_jump = 13;
 var _sfx_id_land = 14;
 
+// game states
 var running = true;
 var state = 'menu';
 
-// window 240x136
-// sprites are 8x8
-
+// for convenience
 var win_width = 240;
 var win_height = 136;
 
+// colour not to draw
 var _alpha_color = 15;
 
+// some gameplay settings
 var _ground_speed = 1.5; // pixels per frame the obstacles and ground moves
-var seconds_between_increase = 5;
-var speed_increase = 0.1;
-var last_set_second = 0;
-
+var seconds_between_increase = 5; // how often to tick up the speed
+var speed_increase = 0.1; // how much to increase speed by
+var last_set_second = 0; // when was the last increase 
 var _min_obstacle_gap = 1000; // minimum possible milliseconds between obstacles
-
-var _game_start_time = false;
+var _game_start_time = false; // to keep score
 
 // returns true if the bounding boxes overlap
 function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
@@ -56,9 +55,7 @@ function bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2){
 	return (x1 < x2_high && x2 < x1_high && y1 < y2_high && y2 < y1_high)
 }
 
-
-
-
+// helper for managing obstacles.
 function obstacleManager(){
 
 	// define possible obstacles here
@@ -218,28 +215,7 @@ function obstacleManager(){
 	];
 
 
-	var min_time_between_obstacles = 100;
 	this.spawnRandomObstacle = function(){
-		var now = time();
-		var diff = now - this.last_obstacle_spawned;
-		// only if min time has passed, one in X chance of spawning
-		if(diff > min_time_between_obstacles){
-
-			// function returns a floating-point, pseudo-random number 
-			// in the range 0 to less than 1 (inclusive of 0, but not 1) 
-			if(Math.random() < 0.05){
-				this.spawn_obstacle();
-			}
-
-		}
-	}
-
-
-	this.current_obstacles = [];
-
-	this.last_obstacle_spawned = time();
-	this.spawn_obstacle = function(obstacle_id){
-
 		// don't spawn an obstacle if it's too close to the last one
 		if(this.OBSTACLE_LIST.length > 0){
 			if(time() - this.last_obstacle_spawned < _min_obstacle_gap){
@@ -247,14 +223,26 @@ function obstacleManager(){
 			}
 		}
 
+		// percent chance to spawn an obstacle (per frame!)
+		if(Math.random() < 0.05){
+			this.spawn_obstacle();
+		}
+
+	}
+
+
+	this.current_obstacles = [];
+	this.last_obstacle_spawned = time();
+	this.spawn_obstacle = function(obstacle_id){
+
 		// get random obstacle
 		if(!obstacle_id && obstacle_id!==0){
 			min = 0;
 			max = Math.floor(this.OBSTACLE_LIST.length-1);
 			var ob_id = Math.floor(Math.random() * (max - min + 1)) + min;
-			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[ob_id]);
+			var new_obs = Object.assign({}, this.OBSTACLE_LIST[ob_id]); // have to make a copy of the object to avoid passing by reference
 		}else{
-			var new_obs = p2 = Object.assign({}, this.OBSTACLE_LIST[obstacle_id]);
+			var new_obs = Object.assign({}, this.OBSTACLE_LIST[obstacle_id]);
 		}
 
 		// set initial x/y
@@ -324,14 +312,15 @@ function obstacleManager(){
 }
 var obstacle_manager = false;
 
+// for managing the player
 function Player() {
 	this.sprite_id = 256;
-	this.sprite_w = 2;
-	this.sprite_h = 2;
-	this.opaque_col = 15;
+	this.sprite_w = 2; // number of composite 8x8 sprite 'blocks' this uses
+	this.sprite_h = 2; 
+	this.opaque_col = _alpha_color;
 	this.sprite_scale = 2;
 	this.sprite_flip = 0;
-	this.actual_sprite_width = (8 * this.sprite_w) * this.sprite_scale;
+	this.actual_sprite_width = (8 * this.sprite_w) * this.sprite_scale; // actual sprite with after scaling and composite size
 
 	this.movement_disabled = false;
 
@@ -347,6 +336,7 @@ function Player() {
 	this.is_jumping = false;
 	this.is_falling = false;
 	
+	// some "physics" settings
 	this.jump_force = -7;
 	this.y_velocity = 0;
 	this.y_gravity = -50;
@@ -354,27 +344,25 @@ function Player() {
 	this.x_speed = 3;
 	
 	this.onGround = function(){
-		// return true if y pos is at
-		// 'resting' height
+		// return true if y pos is at  'resting' height
 		return (this.y >= this.resting_y)
 	}
 	
 	this.move = function(){
 		if(this.movement_disabled) return;
-		if(key(_key_space) || key(_key_up)){
+		if(key(_key_space) || key(_key_up)){ // jump
 			this.jump();
 		}
-		if(key(_key_left)){
+		if(key(_key_left)){ // move left
 			this.x-= this.x_speed;
 		}
-		if(key(_key_right)){
+		if(key(_key_right)){ // move right
 			this.x+= this.x_speed;
 		}
 
-		// do not allow the player to move within 5 pixels of either side
+		// stop player moving outside of the viewport
 		if(this.x < 0) this.x = 0;
 		if(this.x > win_width - this.actual_sprite_width) this.x = win_width - this.actual_sprite_width;
-
 
 	}
 
@@ -392,12 +380,17 @@ function Player() {
 
 			// make explosion
 			explosion(this.x, this.y, this);
+
+			// wobble the screen
 			shake(2,200);
+
+			// explosion noise
 			sfx(_sfx_id_explode, 'C-4', 60,3);
+			
+			// stop music and play gameover theme
 			music_manager.stop();
 			music(2,-1,-1,0,0);
 			
-
 			// stop background moving
 			_ground_speed = 0;
 
@@ -448,12 +441,8 @@ function Player() {
 				}
 			}
 			entities.push(restart_text_entity);
-			
-
 
 		}
-
-
 
 	}
 
@@ -479,10 +468,6 @@ function Player() {
 			var h2 = this_obstacle.collision_h;
 
 			if(bbox_overlaps(x1,y1,w1,h1,x2,y2,w2,h2)){
-				// collision debug
-				// print("IS COLLIDING", 5,5,11);
-				// rect(x1,y1,w1,h1,11);
-				// rect(x2,y2,w2,h2,11);
 				this.explode();
 			}
 		}
@@ -504,7 +489,6 @@ function Player() {
 			}else{
 				// start falling
 				this.y_velocity+= this.fall_speed;
-
 			}
 		}
 		// if i'm rising, don't rise 
@@ -513,6 +497,7 @@ function Player() {
 				this.y_velocity = this.y_gravity;
 		}
 
+		// what will our new Y be with this change?
 		var new_y = this.y + this.y_velocity;
 
 		// if new y would be on or below ground, but current y is not, shake
@@ -521,24 +506,21 @@ function Player() {
 			sfx(_sfx_id_land,'C-1', 10, 1);
 		}
 
-		// if new position would be in the
-		//  ground, set to ground
+		// set new height, but not below the resting height
 		if(new_y >= this.resting_y){
 			this.y = this.resting_y;
 		}else{
 			this.y += this.y_velocity;
 		}
-		// print('this.y: ' + this.y, 50,50,5);
-		// print('this.onGround(): ' + this.onGround(), 50,55,5);
-		// print('this.y_velocity: ' + this.y_velocity, 50,60,5);	
+
 	}
 
 	this.jump_started = false;
 	this.jump = function(){
-		if(!this.onGround()){
+		if(!this.onGround()){ // no double jumps sadly
 				return false;
 		}
-		sfx(_sfx_id_jump, 'E-4', 15,2);
+		sfx(_sfx_id_jump, 'E-4', 15,2); // jump sound
 		this.y_velocity = this.jump_force;
 		this.jump_started = time();
 	}
@@ -574,29 +556,26 @@ var clouds = [];
 function game() {
 	var game_now = time();
 
-	// create player
+	// init the manages if they don't exist alreay
 	if (player === false) {
-		player = new Player();
+		player = new Player(); // create player
 	}
-	// create obstacle manager
 	if (obstacle_manager === false) {
-		obstacle_manager = new obstacleManager();
+		obstacle_manager = new obstacleManager(); // create obstacle manager
 	}
-	// set game start time
 	if(_game_start_time === false){
-		_game_start_time = time();
+		_game_start_time = time(); // set game start time (for scorekeeping)
 	}
 
 	// clear screen
 	cls(15);
 
-
 	// draw background
 	if(clouds.length===0){
 		//init clouds
-		var cloud_percent_separate = 0.2;
+		var cloud_percent_separate = 0.2; // ie 0.2 is a cloud every 20% of the
 		var cloud_distance = Math.floor(win_width * cloud_percent_separate)
-		var cloud_count = win_width/cloud_distance + 100; // lazy
+		var cloud_count = win_width/cloud_distance + 100; // hardcoded 100 clouds + enough to fill one screen. Very lazy
 		for(var i = 0, l = cloud_count; i < l; i++){
 			clouds.push({
 				x_offset: cloud_distance * i,
@@ -607,11 +586,12 @@ function game() {
 		}
 	}else{
 		for(var i=0, l=clouds.length; i<l; i++){
-			// spr(id,x,y,alpha_color,scale,flip,rotate,cell_width,cell_height);
+			// move the clouds
 			clouds[i].x_offset-= (_ground_speed / 6)
+			// draw the clouds
 			spr(clouds[i].sprite_id,
 				clouds[i].x_offset,
-				i % 2 == 0 ? Math.floor(win_height/5) : Math.floor(win_height/5) -15,
+				i % 2 == 0 ? Math.floor(win_height/5) : Math.floor(win_height/5) -15, // offset every other cloud
 				_alpha_color,
 				1,
 				0,
@@ -619,32 +599,34 @@ function game() {
 				clouds[i].sprite_w,
 				clouds[i].sprite_h);
 		}
+		// reset if the last cloud is off the edge of the screen
+		// very lazy...
 		if(clouds[clouds.length-1].x_offset < 0 - (8*clouds[clouds.length-1].sprite_w) ){
 			clouds = [];// reset
 		}
 	}
 
 
-	// draw ground
-	// map(cell_x,cell_y,cell_w,cell_h,x,y,alpha_color,scale,remap);
+	// draw ground. It's the only map sliding along and resetting every 8 pixels
 	ground_offset-= _ground_speed;
 	if(ground_offset < -8){
 		ground_offset = 0;
 	}
 	map(0, 0, (win_width / 8 )+2, 3, ground_offset, win_height - (8 * 2))
 
-	// update playe
+	// update player
 	player.update();
 	
 	// draw player
 	player.draw();
 
-	// spawn obstacle? 
+	// spawn and manage obstacles 
 	obstacle_manager.spawnRandomObstacle();
 	obstacle_manager.update();
 	obstacle_manager.draw();
 
 	// also do any entities
+	// Hardly anything even uses this what a waste
 	if(entities.length > 0){
 		for(var i=0, l=entities.length; i<l; i++){
 			if(entities[i] != undefined){
@@ -655,41 +637,36 @@ function game() {
 			}
 		}
 	}
-	// print("entities.length: " + entities.length,20,20,5);//TEMP
-	
-	//write score
+		
+	//write score in the corner
 	if(!player.movement_disabled){
 		var score = ((game_now - _game_start_time) / 1000).toFixed(2);
 		print(String(score),5,5,3);
 	}
 	
+	// increase difficulty
 	if(_ground_speed!=0){
-		// increase difficulty
 		var now = time();
 		var seconds = Math.floor(now / 1000); // seconds passed
 		if(
-			seconds !== 0 && 
-			seconds % seconds_between_increase === 0 && 
-			last_set_second !== seconds
+			seconds !== 0 && // if not at the very start
+			seconds % seconds_between_increase === 0 && // and seconds is a multiple of our setting
+			last_set_second !== seconds // and it wasn't already increased THIS second
 		){
-			_ground_speed += speed_increase;
-			last_set_second = seconds;
+			_ground_speed += speed_increase; // add difficulty
+			last_set_second = seconds; // make note of when we last did this
 		}
-		//print("speed: " + _ground_speed,12,12,12);
 	}
 
-
+	// some debug stuff shh
 	if(key(_key_0)){
 		print("_ground_speed: " + _ground_speed,5,10,2);
 		print("entites.length: " + entities.length,5,15 + 1,2);
 	}
 
-	// var keyboard_byte = peek(0x0FF88);
-	// print("keyboard_byte: " + keyboard_byte,20,25,5);//TEMP
-
-
 }
 
+// helper for managing music
 var _music_ended = false
 var _main_track_started = false;
 var _second_track_started = false;
@@ -716,10 +693,11 @@ function musicManager(){
 
 	this.play = function(){
 
-		// restart
+		// (re)start
 		if(key(_key_n)){
 			this.start();
 		}
+		// stop
 		if(key(_key_m)){
 			this.stop();
 		}
@@ -739,10 +717,12 @@ function musicManager(){
 		// print("row: " + String(row), 5, 50 + (6*yi++), 1);
 		// print("flags: " + String(flags), 5, 50 + (6*yi++), 1);
 
+		// wait a second before first go
 		if(time() < 1000){
 			return;
 		}
 
+		// start the main track and set started
 		if(!_main_track_started){
 			music(0,-1,-1,0,0);
 			_main_track_started = true;
@@ -750,11 +730,13 @@ function musicManager(){
 
 		var track = peek(0x13FFC)
 
+		// if the main track has run, but the second track hasn't run, but nothing is now playing
 		if(_main_track_started && !_second_track_started && track===255){
-			music(1,-1,-1,0,0);
+			music(1,-1,-1,0,0); // start second track and set started
 			_second_track_started = true;
 		}
 
+		// if both tracks are played and finish, restart (after a delay)
 		if(_main_track_started && _second_track_started && track===255){
 			if(_music_ended === false){
 				_music_ended = time();
@@ -779,7 +761,6 @@ function menu() {
 	if (key(_key_s)) {
 		state = 'game';
 	}
-
 }
 
 function mainControls() {
@@ -792,6 +773,7 @@ function mainControls() {
 
 var music_manager = new musicManager();
 
+// main loop
 function TIC() {
 	mainControls();
 	music_manager.play();
@@ -803,7 +785,7 @@ function TIC() {
 	}
 }
 
-
+// exploding sprite attached to an x,y pos
 function explosion(x,y,parent_entity){
 	var explosion_entity = {
 		parent_entity: parent_entity,
@@ -864,7 +846,7 @@ function explosion(x,y,parent_entity){
 	entities.push(explosion_entity);
 }
 
-// basically the same as a screen shake but it's just a downwards dent
+// wobble the screen down
 function impact(intensity, duration){
 	var hit_entity = {
 		intensity: intensity,
@@ -899,6 +881,7 @@ function impact(intensity, duration){
 	entities.push(hit_entity);
 }
 
+// shake the screen
 function shake(intensity, duration){
 	var shake_entity = {
 		intensity: intensity,
@@ -913,7 +896,7 @@ function shake(intensity, duration){
 			if(now - this.started > duration){
 				this.delete = true;
 				// reset screen shake
-				memset(0x3FF9,0,2);
+				memset(0x3FF9,0,2); // this is the x/y offset of the screen
 			}
 			if(this.delete){ // delete self
 				for(var i=0, l=entities.length; i<l; i++){
@@ -936,52 +919,6 @@ function shake(intensity, duration){
 	entities.push(shake_entity);
 }
 
-
-function smoke(x,y,wind_velocity,duration){
-	// create y many particles
-	var num_particles = 3;
-	// for each particles give them a random x and y velocity
-	min_x = -4;
-	max_x = 0;
-	min_y = -4;
-	max_y = 4;
-	for(var i=0, l=num_particles; i<l; i++){
-		rand_x_velocity = Math.floor(Math.random() * (max_x - min_x + 1)) + min_x;
-		rand_y_velocity = Math.floor(Math.random() * (max_y - min_y + 1)) + min_y;
-		var smokeEntity = {
-			x:x,
-			y:y,
-			x_velocity:rand_x_velocity,
-			y_velocity:rand_y_velocity,
-			wind_velocity:wind_velocity,
-			duration:duration,
-			delete: false,
-			update: function(){
-				this.x += this.x_velocity;
-				this.y += this.y_velocity;
-				if(this.x < -4) this.delete = true;
-				if(this.y < -4) this.delete = true;
-				if(this.x > win_width+4) this.delete = true;
-				if(this.y > win_height+4) this.delete = true;
-				this.x--;
-				if(this.delete){ // delete self
-					for(var i=0, l=entities.length; i<l; i++){
-						if(this == entities[i]){
-							entities.splice(i,1);
-						}
-					}
-				}
-			},
-			draw: function(){
-				pix(this.x+1,this.y,10);
-				pix(this.x-1,this.y,10);
-				pix(this.x,this.y+1,10);
-				pix(this.x,this.y-1,10);
-			}
-		}
-		entities.push(smokeEntity);
-	}
-}
 
 
 // <TILES>
